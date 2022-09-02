@@ -1,0 +1,96 @@
+import React, { useState, useEffect } from 'react';
+import Rating from 'react-rating';
+import Debug from 'sabio-debug';
+import ratingService from '../../services/ratingService';
+import toastr from 'toastr';
+import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
+import PropTypes from 'prop-types';
+
+const _logger = Debug.extend('Rating');
+
+function RatingStar(props) {
+    let comment = props.comment;
+
+    const [rate, setRate] = useState(0);
+
+    const [initialRating, setInitialRating] = useState(0);
+
+    _logger('rate num', rate);
+
+    const onStarRatingClick = (rate) => {
+        setRate(rate);
+        const rateData = {
+            rating: rate,
+            commentId: comment.id,
+            entityTypeId: comment.entityTypeId,
+            entityId: comment.entityId,
+            isDeleted: comment.isDeleted,
+        };
+
+        ratingService.addRating(rateData).then(onAddSuccess).catch(onAddError);
+    };
+
+    const onAddSuccess = (response) => {
+        _logger(response);
+        setInitialRating(response.rating);
+        toastr.success('Add Success');
+    };
+
+    const onAddError = (err) => {
+        _logger('Add error', err);
+        toastr.error('Add Error');
+    };
+
+    useEffect(() => {
+        if (comment?.id > 0) {
+            ratingService.getRatingByCommentId(comment.id).then(onGetByEntIdPageSuccess).catch(onGetByEntIdPageError);
+        }
+    }, []);
+
+    const onGetByEntIdPageSuccess = (response) => {
+        setInitialRating(response.item);
+
+        _logger('rating by commentId success', response.item, response);
+    };
+
+    const onGetByEntIdPageError = (err) => {
+        _logger('page error', err);
+    };
+
+    return (
+        <React.Fragment>
+            <div>
+                <Rating
+                    onClick={onStarRatingClick}
+                    emptySymbol={<AiOutlineStar />}
+                    fullSymbol={<AiFillStar />}
+                    initialRating={initialRating}
+                    style={{
+                        color: 'orange',
+                    }}
+                />
+            </div>
+        </React.Fragment>
+    );
+}
+
+RatingStar.propTypes = {
+    org: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+    }),
+    rating: PropTypes.shape({
+        rate: PropTypes.number.isRequired,
+        entityTypeId: PropTypes.number.isRequired,
+        entityId: PropTypes.number.isRequired,
+        commentId: PropTypes.number.isRequired,
+        isDeleted: PropTypes.bool,
+    }),
+    comment: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+        entityTypeId: PropTypes.number.isRequired,
+        entityId: PropTypes.number.isRequired,
+        isDeleted: PropTypes.bool,
+    }),
+};
+
+export default RatingStar;
